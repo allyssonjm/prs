@@ -58,6 +58,7 @@ return new class extends Migration
             $table->id(); 
             $table->string('name', 50)->notNull(); 
             $table->string('nickname', 50)->unique()->notNull();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->index('nickname');
             $table->timestamps();
         });

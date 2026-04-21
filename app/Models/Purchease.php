@@ -6,6 +6,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string|null $dt_purchase
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Purchease newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Purchease newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Purchease query()
+ * @mixin \Eloquent
+ */
 class Purchease extends Model
 {
     protected $table = "purchease";

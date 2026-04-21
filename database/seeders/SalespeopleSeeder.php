@@ -28,14 +28,9 @@ class SalespeopleSeeder extends Seeder
             $lastname = $faker->lastName;
             $name = "$firstname  $lastname";
             $nickname = Str::lower("$firstname.$lastname");
-            $salespeople[] = [
-                'name' => $name,
-                'nickname' => $nickname,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-            User::insert(
-                [ 
+            
+            $user = User::create(
+                attributes: [ 
                     'name' => $name,    
                     'email' => UnaccentHelper::remove("$nickname@psr.net"),
                     'password' => Hash::make('senha1234'),
@@ -44,6 +39,14 @@ class SalespeopleSeeder extends Seeder
                     'uuid' => Str::uuid(),
                 ]
             );
+            
+            $salespeople[] = [
+                'name' => $name,
+                'nickname' => $nickname,
+                'user_id' => $user->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
 
         // Insere os vendedores na tabela em lotes para eficiência

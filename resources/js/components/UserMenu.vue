@@ -15,31 +15,32 @@
   const user = computed(() => ({
     name: auth.value.user.name,
     avatar: {
-      text: getInitials(auth.value.user.name),
+      src: auth.value.user.avatar
     },
   }))
 
   const items = computed<DropdownMenuItem[][]>(() => [
     [
       {
-        type: 'label',
         label: user.value.name,
-        avatar: user.value.avatar,
+        avatar: { src: auth.value.user.avatar, loading: 'lazy' as const }
       },
     ],
     [
       {
-        label: 'Profile',
-        icon: 'i-lucide-user',
-      },
-      {
-        label: 'Billing',
-        icon: 'i-lucide-credit-card',
-      },
-      {
         label: 'Settings',
         icon: 'i-lucide-settings',
         to: '/settings/profile',
+      },
+      {
+        label: 'SalesPeople',
+        icon: 'i-lucide-user',
+        to: '/settings/salespeople',
+      },
+      {
+        label: 'Notifications',
+        icon: 'i-lucide-bell',
+        to: '/settings/notifications',
       },
     ],
     [
@@ -96,6 +97,7 @@
     :content="{ align: 'center', collisionPadding: 12 }"
     :ui="{ content: collapsed ? 'w-48' : 'w-(--reka-dropdown-menu-trigger-width)' }"
   >
+
     <UButton
       v-bind="{
         ...user,

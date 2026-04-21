@@ -40,8 +40,8 @@
             },
           },
           {
-            label: 'Members',
-            to: '/settings/members',
+            label: 'SalesPeople',
+            to: '/settings/salespeople',
             onSelect: () => {
               open.value = false
             },
@@ -67,7 +67,7 @@
       {
         label: 'GitHub',
         icon: 'simple-icons:github',
-        to: 'https://github.com/nuxt-ui-pro/dashboard-vue',
+        to: 'https://github.com/allyssonjm/prs',
         target: '_blank',
       },
     ]

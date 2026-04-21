@@ -44,6 +44,13 @@ export interface Member {
   avatar: Avatar
 }
 
+export interface SalesPerson {
+  name: string
+  nickname: string,
+  email: string,
+  avatar: Avatar
+}
+
 export interface Stat {
   title: string
   icon: string

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\SalesPeopleController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -20,6 +21,10 @@ Route::middleware('auth')->group(function (): void {
         ->name('password.update');
 
     Route::get('settings/members', fn () => Inertia::render('settings/Members'))->name('members');
+
+    Route::get('settings/salespeople', fn () => Inertia::render('settings/SalesPeople'))->name('salespeople');
+    
+    Route::get('settings/salespeople/list', [SalesPeopleController::class, 'show'])->name('salespeople.list');
 
     Route::get('settings/notifications', fn () => Inertia::render('settings/Notifications'))->name('notifications');
 });

@@ -10,9 +10,9 @@
         exact: true,
       },
       {
-        label: 'Members',
+        label: 'SalesPeople',
         icon: 'i-lucide-users',
-        to: '/settings/members',
+        to: '/settings/salespeople',
       },
       {
         label: 'Notifications',

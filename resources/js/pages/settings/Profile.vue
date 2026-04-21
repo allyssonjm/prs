@@ -24,11 +24,11 @@
 
   type ProfileSchema = z.output<typeof profileSchema>
   const auth = useAuth()
-
+console.log(auth.value.user)
   const profile = reactive<Partial<ProfileSchema>>({
     name: auth.value.user.name,
     email: auth.value.user.email,
-    avatar: undefined,
+    avatar: auth.value.user.avatar,
   })
 
   const form = useForm<Partial<ProfileSchema>>({
@@ -109,13 +109,13 @@
         <UFormField
           name="avatar"
           label="Avatar"
-          description="JPG, GIF or PNG. 1MB Max."
+          description="SVG, JPG, GIF or PNG. 1MB Max."
           class="flex justify-between gap-4 max-sm:flex-col sm:items-center"
         >
           <div class="flex flex-wrap items-center gap-3">
             <UAvatar :src="profile.avatar" :alt="profile.name" size="lg" />
             <UButton label="Choose" color="neutral" @click="onFileClick" />
-            <input ref="fileRef" type="file" class="hidden" accept=".jpg, .jpeg, .png, .gif" @change="onFileChange" />
+            <input ref="fileRef" type="file" class="hidden" accept=".svg, .jpg, .jpeg, .png, .gif" @change="onFileChange" />
           </div>
         </UFormField>
       </UPageCard>
