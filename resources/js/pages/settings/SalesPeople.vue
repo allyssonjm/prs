@@ -27,9 +27,7 @@
   <SettingsLayout>
     <Head title="Salespeople List" />
 
-    <UPageCard title="Salespeople" description="Invite new salespeople by email address." variant="naked" orientation="horizontal" class="mb-4">
-      <UButton label="Invite people" color="neutral" class="w-fit lg:ms-auto" />
-    </UPageCard>
+    <UPageCard title="Salespeople List" variant="naked" orientation="horizontal" class="mb-4" />
 
     <UPageCard variant="subtle" :ui="{ container: 'p-0 sm:p-0 gap-y-0', wrapper: 'items-stretch', header: 'p-4 mb-0 border-b border-default' }">
       <template #header>

@@ -5,11 +5,13 @@
   import { useFetch } from '@vueuse/core'
   import { upperFirst } from 'scule'
   import { h, ref, resolveComponent, useTemplateRef, watch } from 'vue'
-  import type { User } from '../types'
+  import type { Customer, User } from '../types'
+  import { list } from '@/routes/customers'
 
   defineOptions({ layout: Layout })
 
   const UAvatar = resolveComponent('UAvatar')
+  const UIcon = resolveComponent('UIcon')
   const UButton = resolveComponent('UButton')
   const UBadge = resolveComponent('UBadge')
   const UDropdownMenu = resolveComponent('UDropdownMenu')
@@ -18,18 +20,23 @@
   const toast = useToast()
   const table = useTemplateRef('table')
 
+  const formatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+
   const columnFilters = ref([
     {
-      id: 'email',
+      id: 'name',
       value: '',
     },
   ])
   const columnVisibility = ref()
-  const rowSelection = ref({ 1: true })
+  // const rowSelection = ref({ 0: true })
 
-  const { data, isFetching } = useFetch('https://dashboard-template.nuxt.dev/api/customers', { initialData: [] }).json<User[]>()
+  const { data, isFetching } = useFetch(list().url, { initialData: [] }).json<Customer[]>()
 
-  function getRowItems(row: Row<User>) {
+  function getRowItems(row: Row<Customer>) {
     return [
       {
         type: 'label',
@@ -74,25 +81,10 @@
     ]
   }
 
-  const columns: TableColumn<User>[] = [
-    {
-      id: 'select',
-      header: ({ table }) =>
-        h(UCheckbox, {
-          modelValue: table.getIsSomePageRowsSelected() ? 'indeterminate' : table.getIsAllPageRowsSelected(),
-          'onUpdate:modelValue': (value: boolean | 'indeterminate') => table.toggleAllPageRowsSelected(!!value),
-          ariaLabel: 'Select all',
-        }),
-      cell: ({ row }) =>
-        h(UCheckbox, {
-          modelValue: row.getIsSelected(),
-          'onUpdate:modelValue': (value: boolean | 'indeterminate') => row.toggleSelected(!!value),
-          ariaLabel: 'Select row',
-        }),
-    },
+  const columns: TableColumn<Customer>[] = [
     {
       accessorKey: 'id',
-      header: 'ID',
+      header: '#',
     },
     {
       accessorKey: 'name',
@@ -100,70 +92,47 @@
       cell: ({ row }) => {
         return h('div', { class: 'flex items-center gap-3' }, [
           h(UAvatar, {
-            ...row.original.avatar,
-            size: 'lg',
+            src: row.original.avatar,
+            alt: row.original.name,
+            loading: 'lazy',
+            size: 'xl',
           }),
-          h('div', undefined, [h('p', { class: 'font-medium text-highlighted' }, row.original.name), h('p', { class: '' }, `@${row.original.name}`)]),
+          h('div', undefined, [h('p', { class: 'font-medium text-highlighted' }, row.original.name), h('p', { class: '' }, `@${row.original.name.replace(/\s/g, '.').toLocaleLowerCase(  )}`)]),
         ])
       },
     },
     {
-      accessorKey: 'email',
+      accessorKey: 'age',
       header: ({ column }) => {
         const isSorted = column.getIsSorted()
-
         return h(UButton, {
           color: 'neutral',
           variant: 'ghost',
-          label: 'Email',
+          label: 'Age',
           icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
           class: '-mx-2.5',
           onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
         })
       },
-    },
-    {
-      accessorKey: 'location',
-      header: 'Location',
-      cell: ({ row }) => row.original.location,
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      filterFn: 'equals',
       cell: ({ row }) => {
-        const color = {
-          subscribed: 'success' as const,
-          unsubscribed: 'error' as const,
-          bounced: 'warning' as const,
-        }[row.original.status]
-
-        return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () => row.original.status)
+        return h(UBadge, { class: 'capitalize', variant: 'subtle', color: 'info', icon:'i-lucide-cake' }, () => ` ${row.original.age} years old`)
       },
     },
     {
-      id: 'actions',
+      accessorKey: 'total_purchases',
+      header: ({ column }) => {
+        const isSorted = column.getIsSorted()
+        return h(UButton, {
+          color: 'neutral',
+          variant: 'ghost',
+          label: 'Total Purchases',
+          icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
+          class: '-mx-2.5',
+          onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+        })
+      },
       cell: ({ row }) => {
-        return h(
-          'div',
-          { class: 'text-right' },
-          h(
-            UDropdownMenu,
-            {
-              content: {
-                align: 'end',
-              },
-              items: getRowItems(row),
-            },
-            () =>
-              h(UButton, {
-                icon: 'i-lucide-ellipsis-vertical',
-                color: 'neutral',
-                variant: 'ghost',
-                class: 'ml-auto',
-              }),
-          ),
-        )
+        return h(UBadge, { class: 'capitalize', variant: 'subtle', color: 'primary', icon:'i-lucide-wallet' }, () => formatter.format(row.original.total_purchases))
       },
     },
   ]
@@ -188,7 +157,7 @@
 
   const pagination = ref({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 30,
   })
 </script>
 
@@ -209,11 +178,11 @@
     <template #body>
       <div class="flex flex-wrap items-center justify-between gap-1.5">
         <UInput
-          :model-value="table?.tableApi?.getColumn('email')?.getFilterValue() as string"
+          :model-value="table?.tableApi?.getColumn('name')?.getFilterValue() as string"
           class="max-w-sm"
           icon="i-lucide-search"
-          placeholder="Filter emails..."
-          @update:model-value="table?.tableApi?.getColumn('email')?.setFilterValue($event)"
+          placeholder="Filter names..."
+          @update:model-value="table?.tableApi?.getColumn('name')?.setFilterValue($event)"
         />
 
         <div class="flex flex-wrap items-center gap-1.5">
@@ -233,18 +202,7 @@
             </UButton>
           </CustomersDeleteModal>
 
-          <USelect
-            v-model="statusFilter"
-            :items="[
-              { label: 'All', value: 'all' },
-              { label: 'Subscribed', value: 'subscribed' },
-              { label: 'Unsubscribed', value: 'unsubscribed' },
-              { label: 'Bounced', value: 'bounced' },
-            ]"
-            :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"
-            placeholder="Filter status"
-            class="min-w-28"
-          />
+          
           <UDropdownMenu
             :items="
               table?.tableApi

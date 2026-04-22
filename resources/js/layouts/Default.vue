@@ -17,6 +17,22 @@
         },
       },
       {
+        label: 'Purcheases',
+        icon: 'i-lucide-shopping-cart',
+        to: '/purcheases',
+        onSelect: () => {
+          open.value = false
+        },
+      },
+      {
+        label: 'Products',
+        icon: 'i-lucide-box',
+        to: '/products',
+        onSelect: () => {
+          open.value = false
+        },
+      },
+      {
         label: 'Customers',
         icon: 'i-lucide-users',
         to: '/customers',
@@ -88,7 +104,7 @@
           id: 'source',
           label: 'View page source',
           icon: 'simple-icons:github',
-          to: `https://github.com/nuxt-ui-pro/dashboard-vue/blob/main/src/pages${url === '/' ? '/index' : url}.vue`,
+          to: `https://github.com/allyssonjm/prs/blob/main/resources/js/pages/Dashboard.vue`,
           target: '_blank',
         },
       ],

@@ -16,6 +16,24 @@ export type BreadcrumbItemType = BreadcrumbItem
 export type UserStatus = 'subscribed' | 'unsubscribed' | 'bounced'
 export type SaleStatus = 'paid' | 'failed' | 'refunded'
 
+export interface Customer {
+  id: string
+  name: string
+  age: number
+  total_purchases: number
+  avatar?: AvatarProps
+}
+
+export interface Product {
+  id: string
+  name: string
+  category: string
+  color: string
+  size: string
+  brand: string
+  price: number
+}
+
 export interface User {
   id: string
   name: string

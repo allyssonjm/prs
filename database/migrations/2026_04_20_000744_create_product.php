@@ -46,10 +46,11 @@ return new class extends Migration
             $table->index('feature'); 
         });
         
-        Schema::create('clients', function (Blueprint $table) {
+        Schema::create('customers', function (Blueprint $table) {
             $table->id(); 
             $table->string('name', 50)->notNull(); 
             $table->integer('age')->notNull();
+            $table->string('avatar')->nullable();
             $table->index('age');
             $table->timestamps();
         });
@@ -79,7 +80,7 @@ return new class extends Migration
         Schema::create('purcheases', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
+            $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
             $table->foreignId('salesperson_id')->constrained('salespeople')->cascadeOnDelete();
             $table->datetime('dt_purchease')->notNull();
             $table->string('purchease_hash', 50)->notNull();
@@ -100,7 +101,7 @@ return new class extends Migration
         Schema::dropIfExists('sizes');
         Schema::dropIfExists('colors');
         Schema::dropIfExists('categories');
-        Schema::dropIfExists('clients');
+        Schema::dropIfExists('customers');
         Schema::dropIfExists('salespeople');
     }
 };

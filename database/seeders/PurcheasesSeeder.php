@@ -17,7 +17,7 @@ class PurcheasesSeeder extends Seeder
     {
         $faker = Faker::create('pt_BR');
 
-        $clients = DB::table('clients')->get()->pluck('id')->toArray();
+        $customers = DB::table('customers')->limit(100)->get()->pluck('id')->toArray();
         $salespeople = DB::table('salespeople')->get()->pluck('id')->toArray();
         $products = DB::table('products')->get()->pluck('id')->toArray();
 
@@ -26,7 +26,7 @@ class PurcheasesSeeder extends Seeder
         for ($i = 0; $i < 2500; $i++) {
             $total_products = mt_rand(1, 10);
             $dt_purchease = $this->generateUniqueTimestamp();
-            $client_id = $faker->randomElement($clients);
+            $customer_id = $faker->randomElement($customers);
             $salesperson_id = $faker->randomElement($salespeople);
             $hash = $faker->unique()->sha1();
 
@@ -34,7 +34,7 @@ class PurcheasesSeeder extends Seeder
                 $purcheases[] = [
                     'product_id' => $faker->randomElement($products),
                     'salesperson_id' => $salesperson_id,
-                    'client_id' => $client_id,
+                    'customer_id' => $customer_id,
                     'dt_purchease' => $dt_purchease,
                     'purchease_hash' => $hash,
                     'created_at' => now(),
