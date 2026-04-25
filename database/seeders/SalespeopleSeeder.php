@@ -29,21 +29,10 @@ class SalespeopleSeeder extends Seeder
             $name = "$firstname  $lastname";
             $nickname = Str::lower("$firstname.$lastname");
             
-            $user = User::create(
-                attributes: [ 
-                    'name' => $name,    
-                    'email' => UnaccentHelper::remove("$nickname@psr.net"),
-                    'password' => Hash::make('senha1234'),
-                    'avatar' => AvatarHelper::generateRandomAvatar(),
-                    'email_verified_at' => now()->format('Y-m-d H:i:s.u'),
-                    'uuid' => Str::uuid(),
-                ]
-            );
             
             $salespeople[] = [
                 'name' => $name,
                 'nickname' => $nickname,
-                'user_id' => $user->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
