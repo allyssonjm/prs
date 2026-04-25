@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemplo TFJS - MNIST e MobileNet</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        canvas { border: 1px solid #000; cursor: crosshair; }
+        button { margin: 10px; padding: 10px; }
+        #status { margin-top: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        @media (max-width: 600px) { canvas { width: 100%; height: auto; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Deep Learning com JavaScript - MNIST e Transfer Learning</h1>
+        
+        <h2>Convnet Simples para MNIST</h2>
+        <button id="trainBtn">Treinar Modelo MNIST</button>
+        <div id="status"></div>
+        
+        <h3>Desenhe um Dígito (0-9)</h3>
+        <canvas id="canvas" width="280" height="280"></canvas>
+        <br>
+        <button id="clearBtn">Limpar</button>
+        <button id="predictBtn">Prever Dígito</button>
+        <div id="prediction"></div>
+        
+        <h2>Transfer Learning com MobileNet</h2>
+        <button id="loadMobileNetBtn">Carregar MobileNet</button>
+        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        <button id="uploadBtn">Upload Imagem</button>
+        <button id="webcamBtn">Usar Webcam</button>
+        <video id="webcam" width="320" height="240" autoplay style="display: none;"></video>
+        <canvas id="webcamCanvas" width="320" height="240" style="display: none;"></canvas>
+        <div id="mobilenetResult"></div>
+    </div>
+
+    <!-- CDNs -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mnist@1.1.0/data.js"></script>
+
+    <script>
+        // Configurar backend WebGL automaticamente
+        tf.setBackend('webgl');
+
+        let model;
+        let mnistModel;
+        let mobilenet;
+        let isTraining = false;
+        let webcamStream;
+
+        // Função para atualizar status
+        function updateStatus(message) {
+            document.getElementById('status').innerText = message;
+        }
+
+        // Carregar dados MNIST
+        async function loadMnistData() {
+            try {
+                const data = await mnist.load();
+                return data;
+            } catch (error) {
+                console.error('Erro ao carregar MNIST:', error);
+                updateStatus('Erro ao carregar dados MNIST.');
+            }
+        }
+
+        // Criar modelo Convnet para MNIST
+        function createMnistModel() {
+            const model = tf.sequential();
+            model.add(tf.layers.conv2d({inputShape: [28, 28, 1], filters: 32, kernelSize: 3, activation: 'relu'}));
+            model.add(tf.layers.maxPooling2d({poolSize: 2}));
+            model.add(tf.layers.flatten());
+            model.add(tf.layers.dense({units: 128, activation: 'relu'}));
+            model.add(tf.layers.dense({units: 10, activation: 'softmax'}));
+            model.compile({optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy']});
+            return model;
+        }
+
+        // Treinar modelo MNIST
+        async function trainMnistModel() {
+            if (isTraining) return;
+            isTraining = true;
+            updateStatus('Carregando dados...');
+            const data = await loadMnistData();
+            if (!data) return;
+
+            mnistModel = createMnistModel();
+            updateStatus('Iniciando treinamento...');
+
+            await mnistModel.fit(data.trainImages, data.trainLabels, {
+                epochs: 5,
+                validationSplit: 0.2,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        updateStatus(`Época ${epoch + 1}/5 - Perda: ${logs.loss.toFixed(4)}, Acurácia: ${(logs.acc * 100).toFixed(2)}%, Val Perda: ${logs.val_loss.toFixed(4)}, Val Acurácia: ${(logs.val_acc * 100).toFixed(2)}%`);
+                    },
+                    onTrainEnd: async (logs) => {
+                        // Capturar acurácia final da validação
+                        const finalValAcc = logs.history.val_acc[logs.history.val_acc.length - 1] * 100;
+                        alert(`Modelo treinado com sucesso! Acurácia final na validação: ${finalValAcc.toFixed(2)}%`);
+                        isTraining = false;
+                        updateStatus('Treinamento concluído.');
+                    }
+                }
+            });
+        }
+
+        // Canvas para desenhar dígito
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 280, 280);
+        let drawing = false;
+
+        canvas.addEventListener('mousedown', () => drawing = true);
+        canvas.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drawing = true; });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); drawing = false; });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+
+        function draw(event) {
+            if (!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+        }
+
+        // Limpar canvas
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 280, 280);
+        });
+
+        // Prever dígito
+        document.getElementById('predictBtn').addEventListener('click', async () => {
+            if (!mnistModel) {
+                alert('Treine o modelo primeiro!');
+                return;
+            }
+            const imageData = ctx.getImageData(0, 0, 280, 280);
+            const input = tf.browser.fromPixels(imageData, 1).resizeBilinear([28, 28]).expandDims(0).div(255);
+            const prediction = mnistModel.predict(input);
+            const predictedClass = prediction.argMax(1).dataSync()[0];
+            document.getElementById('prediction').innerText = `Dígito previsto: ${predictedClass}`;
+            tf.dispose([input, prediction]);
+        });
+
+        // Carregar MobileNet
+        document.getElementById('loadMobileNetBtn').addEventListener('click', async () => {
+            updateStatus('Carregando MobileNet...');
+            mobilenet = await mobilenet.load();
+            updateStatus('MobileNet carregado.');
+        });
+
+        // Upload imagem
+        document.getElementById('uploadBtn').addEventListener('click', () => {
+            document.getElementById('imageInput').click();
+        });
+        document.getElementById('imageInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const img = new Image();
+            img.onload = async () => {
+                const predictions = await mobilenet.classify(img);
+                displayMobilenetResults(predictions);
+            };
+            img.src = URL.createObjectURL(file);
+        });
+
+        // Webcam
+        document.getElementById('webcamBtn').addEventListener('click', async () => {
+            const video = document.getElementById('webcam');
+            const canvas = document.getElementById('webcamCanvas');
+            const ctx = canvas.getContext('2d');
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = webcamStream;
+                video.style.display = 'block';
+                canvas.style.display = 'block';
+                setInterval(async () => {
+                    ctx.drawImage(video, 0, 0, 320, 240);
+                    const predictions = await mobilenet.classify(canvas);
+                    displayMobilenetResults(predictions);
+                }, 1000);
+            } catch (error) {
+                console.error('Erro na webcam:', error);
+            }
+        });
+
+        // Exibir resultados MobileNet
+        function displayMobilenetResults(predictions) {
+            const resultDiv = document.getElementById('mobilenetResult');
+            resultDiv.innerHTML = '<h4>Top 5 Classes:</h4>';
+            predictions.slice(0, 5).forEach(pred => {
+                resultDiv.innerHTML += `<p>${pred.className}: ${(pred.probability * 100).toFixed(2)}%</p>`;
+            });
+        }
+
+        // Evento para treinar
+        document.getElementById('trainBtn').addEventListener('click', trainMnistModel);
+    </script>
+</body>
+</html>

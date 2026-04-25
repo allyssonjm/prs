@@ -1,21 +1,4 @@
-# PRS
-**Product Recomendation System**
-
-Product recommendation project using PHP (Laravel 13 / migrations and seeders), PostgreSQL (pg_vector extension), and Node.js (TensorFlow.js),  for the **Fundamentos de IA e LLMs para Programadores - Fundamentals of AI and LLMs for Programmers** course in the **Engenharia de Software em IA Aplicada - Software Engineering in Applied AI** postgraduate program at Anhanguera.
-
-The project will be an extension of **Professor Erick Wendel's E-commerce Recommendation System project**.
-
-## Version
-Alpha 1.0.0
-
-## Author
-Allysson JM
-
-
-
 # E-commerce Recommendation System
-
-Erick Wendel
 
 A web application that displays user profiles and product listings, with the ability to track user purchases for future machine learning recommendations using TensorFlow.js.
 
@@ -54,6 +37,3 @@ npm start
 - TensorFlow.js-based recommendation engine
 - User similarity analysis
 - Product recommendation based on purchase history
-
-
-
