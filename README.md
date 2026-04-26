@@ -132,11 +132,12 @@ Frontend: HTML/CSS/JS + Bootstrap
 | POST | /api/retrain | Status do modelo treinado |
 | GET| /api/model/status| Verifica o status atual do modelo de recomendação. |
 
-# WebSocket
+# Protocolo WebSocket
+
 
 trainModel - Inicia treinamento do modelo
 recommend - Solicita recomendações para um usuário
-status - Obtém status atual do modelo
+status - Solicita o status atual do modelo.
 
 
 

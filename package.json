@@ -10,6 +10,11 @@
   "keywords": [
     "tensorflowjs, netneural, recommendation, system"
   ],
+  "scripts": {
+    "start:backend": "npm run start --prefix app/backend",
+    "start:frontend": "npm run start --prefix app/frontend",
+    "migrate": "npm run migrate --prefix app/backend"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/allyssonjm/prs.git"
