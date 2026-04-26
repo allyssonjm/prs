@@ -1,0 +1,30 @@
+{
+  "name": "prs",
+  "version": "1.0.0",
+  "description": "**Product Recomendation System**",
+  "main": "app/index.js",
+  "type": "module",
+  "author": "Allyssonjm<allysosnjm@gmail.com>",
+  "homepage": "https://github.com/allyssonjm/prs#readme",
+  "license": "ISC",
+  "keywords": [
+    "tensorflowjs, netneural, recommendation, system"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/allyssonjm/prs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/allyssonjm/prs/issues"
+  },
+  "scripts": {
+    "train": "node --max-old-space-size=8192 scripts/train.js",
+    "predict": "node scripts/predict.js"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.15.0",
+    "dotenv": "^16.3.1",
+    "fs-extra": "^11.1.1",
+    "pg": "^8.11.3"
+  }
+}

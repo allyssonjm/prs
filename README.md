@@ -1,59 +1,140 @@
-# PRS
-**Product Recomendation System**
 
-Product recommendation project using PHP (Laravel 13 / migrations and seeders), PostgreSQL (pg_vector extension), and Node.js (TensorFlow.js),  for the **Fundamentos de IA e LLMs para Programadores - Fundamentals of AI and LLMs for Programmers** course in the **Engenharia de Software em IA Aplicada - Software Engineering in Applied AI** postgraduate program at Anhanguera.
+# Product Recomendation System - PRS
 
-The project will be an extension of **Professor Erick Wendel's E-commerce Recommendation System project**.
+Sistema de recomendação de produtos com Machine Learning usando TensorFlow.js no backend e PostgreSQL com pgvector.
 
-## Version
-Alpha 1.0.0
-
-## Author
-Allysson JM
+Este projeto utiliza PHP (Laravel 13 / migrações e seeders), PostgreSQL (extensão pg_vector) e Node.js (TensorFlow.js), e extende o ERS E-commerce recomendation Systema  desenvolvido para o curso **Fundamentos de IA e LLMs para Programadores** do programa de pós-graduação **Engenharia de Software em IA Aplicada** da Anhanguera.
 
 
+## Pré-requisitos
 
-# E-commerce Recommendation System
+- Node.js 18+
+- PostgreSQL 15+ com extensão pgvector
+- (Opcional) NVIDIA GPU para treinamento acelerado
 
-Erick Wendel
+## Instalação
 
-A web application that displays user profiles and product listings, with the ability to track user purchases for future machine learning recommendations using TensorFlow.js.
+### Backend
 
-## Project Structure
-
-- `index.html` - Main HTML file for the application
-- `index.js` - Entry point for the application
-- `view/` - Contains classes for managing the DOM and templates
-- `controller/` - Contains controllers to connect views and services
-- `service/` - Contains business logic for data handling
-- `data/` - Contains JSON files with user and product data
-
-## Setup and Run
-
-1. Install dependencies:
-```
+```bash
+cd backend
 npm install
+cp .env.example .env  # Configure suas credenciais do banco
+npm run migrate        # Executa migrations do banco
+npm start              # Inicia o servidor na porta 3001
+
+cd frontend
+npm install
+npm start              # Inicia o frontend na porta 3000
 ```
 
-2. Start the application:
+
+## Novas Features
+
+1) o treinamento não deve mais ocorrer diretamente no Browser, migrando o processamento
+para o backend com node.js
+
+2) A base dos dados de treinamento não serão mais processadas dos arquivos "data/products.json"
+e "data/users.json" mas através de consulta de banco de dados postgres conforme schema presente no arquivo
+
+3) Alterar as tabelas da base de dados para armazenar os vetores de resultantes do treinamento com a extensão pg_vector
+
+4) A predição deverá ocorrer através de consulta na base de dados
+
+## Nova Estrutura de arquivos
+
+product-recommendation-system/
+├── app/backend/
+│   ├── package.json
+│   ├── server.js
+│   ├── .env
+│   ├── database/
+│   │   ├── connection.js
+│   │   ├── migrate.js
+│   │   └── migrations/
+│   │       └── add_pgvector.sql
+│   ├── repositories/
+│   │   ├── ProductRepository.js
+│   │   ├── UserRepository.js
+│   │   └── EmbeddingRepository.js
+│   └── services/
+│       ├── VectorService.js
+│       ├── ModelTrainingService.js
+│       └── RecommendationService.js
+├── app/frontend/
+│   ├── package.json
+│   ├── index.html
+│   ├── style.css
+│   ├── data/
+│   │   ├── users.json
+│   │   └── products.json
+│   └── src/
+│       ├── index.js
+│       ├── controller/
+│       │   ├── UserController.js
+│       │   ├── ProductController.js
+│       │   ├── ModelTrainingController.js
+│       │   ├── TFVisorController.js
+│       │   └── WorkerController.js
+│       ├── events/
+│       │   ├── constants.js
+│       │   └── events.js
+│       ├── service/
+│       │   ├── UserService.js
+│       │   └── ProductService.js
+│       ├── view/
+│       │   ├── View.js
+│       │   ├── UserView.js
+│       │   ├── ProductView.js
+│       │   ├── ModelTrainingView.js
+│       │   ├── TFVisorView.js
+│       │   └── templates/
+│       │       ├── past-purchase.html
+│       │       └── product-card.html
+│       └── workers/
+│           └── modelTrainingWorker.js
+└── README.md
+
+
+# Uso
+
+1) Acesse http://localhost:3000
+
+2) Selecione um usuário no dropdown
+
+3) Clique em "Train Model" para treinar o modelo de recomendação
+
+4) Após o treinamento, clique em "Run Recommendation" para ver produtos recomendados
+
+5) Clique em "Buy Now" em qualquer produto para simular uma compra
+
+# Arquitetura
+
 ```
-npm start
+Backend: Node.js + Express + WebSocket + TensorFlow.js (GPU)
+Banco de Dados: PostgreSQL + pgvector (embeddings e busca por similaridade)
+Frontend: HTML/CSS/JS + Bootstrap
 ```
 
-3. Open your browser and navigate to `http://localhost:8080`
+# Endpoints API
 
-## Features
 
-- User profile selection with details display
-- Past purchase history display
-- Product listing with "Buy Now" functionality
-- Purchase tracking using sessionStorage
+| Método | Endpoint | Descrição |
+| :--- | :---: | ---: |
+| Left-aligned | Centered | Right-aligned |
+| GET | /api/users | Lista todos os usuários |
+| GET | /api/users | Lista todos os usuários |
+| GET| /api/users/:id| Obtém usuário por ID
+| GET| /api/products| Lista todos os produtos
+| GET| /api/recommendations/:userId| Recomendações por embedding
+| GET| /api/recommendations/hybrid/:userId| Recomendações híbridas
+| GET| /api/model/status| Status do modelo treinado
 
-## Future Enhancements
+# WebSocket
 
-- TensorFlow.js-based recommendation engine
-- User similarity analysis
-- Product recommendation based on purchase history
+trainModel - Inicia treinamento do modelo
+recommend - Solicita recomendações para um usuário
+status - Obtém status atual do modelo
 
 
 
