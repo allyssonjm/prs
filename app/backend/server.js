@@ -194,13 +194,13 @@ async function retrainModel () {
     trainingInProgress = true
     isModelTrained = false
 
-    // Notificar todos os clients
+    // Notificar todos os clients que o treinamento começou
     const startMessage = JSON.stringify({
         type: 'trainingStarted'
     })
     activeWebSockets.forEach(ws => {
         if (ws.readyState === ws.OPEN) ws.send(startMessage)
-    })
+    });
 
     trainingService.removeAllListeners()
 

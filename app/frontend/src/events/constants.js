@@ -15,7 +15,7 @@ export const events = {
 
 export const workerEvents = {
     trainingComplete: 'training:complete',
-    trainModel: 'train:model',
+    trainModel: 'trainModel',
     recommend: 'recommend',
     trainingLog: 'training:log',
     progressUpdate: 'progress:update',

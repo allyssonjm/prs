@@ -13,7 +13,6 @@ export class ModelController {
         this.#modelView = modelView
         this.#userService = userService
         this.#events = events
-
         this.init()
     }
 
@@ -45,12 +44,14 @@ export class ModelController {
         this.#modelView.registerRunRecommendationCallback(this.handleRunRecommendation.bind(this))
 
         this.#events.onUserSelected((user) => {
+            console.log('User selected in ModelController:', user?.id)
             this.#currentUser = user
             if (!this.#alreadyTrained) return
             this.#modelView.enableRecommendButton()
         })
 
         this.#events.onTrainingComplete((data) => {
+            console.log('Training complete in ModelController')
             this.#alreadyTrained = true
             this.#modelView.enableRecommendButton()
             this.#modelView.updateTrainingStatus('complete', `Training completed! Accuracy: ${(data.accuracy * 100).toFixed(2)}%`)
@@ -60,6 +61,7 @@ export class ModelController {
             }, 3000)
 
             if (this.#currentUser) {
+                console.log('Dispatching recommend for user after training:', this.#currentUser.id)
                 this.#events.dispatchRecommend(this.#currentUser)
             }
         })
@@ -77,16 +79,19 @@ export class ModelController {
         )
 
         this.#events.onTrainingStarted(() => {
-            this.#modelView.updateTrainingStatus('started', 'Training started...')
+            this.#modelView.updateTrainingStatus('training', 'Training started...')
+            this.#modelView.disableTrainButton()
         })
     }
 
     async handleTrainModel () {
+        console.log('handleTrainModel called - dispatching train event')
         this.#modelView.disableTrainButton()
-        this.#modelView.updateTrainingStatus('training', 'Training in progress...')
+        this.#modelView.updateTrainingStatus('training', 'Starting training...')
         this.#alreadyTrained = false
 
         const users = await this.#userService.getUsers()
+        console.log('Dispatching train model with', users.length, 'users')
         this.#events.dispatchTrainModel(users)
     }
 
@@ -98,6 +103,7 @@ export class ModelController {
     }
 
     async handleRunRecommendation () {
+        console.log('handleRunRecommendation called')
         if (!this.#currentUser) {
             this.#modelView.showError('Please select a user first')
             return
@@ -109,6 +115,7 @@ export class ModelController {
         }
 
         const updatedUser = await this.#userService.getUserById(this.#currentUser.id)
+        console.log('Dispatching recommend for user:', updatedUser.id)
         this.#events.dispatchRecommend(updatedUser)
         this.#modelView.updateTrainingStatus('recommending', 'Generating recommendations...')
 

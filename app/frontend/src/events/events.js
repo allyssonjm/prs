@@ -56,6 +56,7 @@ export default class Events {
         })
     }
     static dispatchTrainModel (data) {
+        console.log('Dispatching train model event')
         const event = new CustomEvent(events.modelTrain, {
             detail: data
         })
