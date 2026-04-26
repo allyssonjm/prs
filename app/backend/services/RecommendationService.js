@@ -34,7 +34,7 @@ export class RecommendationService {
         return this.context
     }
 
-    async getRecommendations (userId, limit = 10) {
+    async getRecommendations (userId, limit = 40) {
         await this.initContext()
 
         const user = await this.userRepo.getUserById(userId)

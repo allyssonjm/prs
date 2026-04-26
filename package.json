@@ -2,7 +2,7 @@
   "name": "prs",
   "version": "1.0.0",
   "description": "**Product Recomendation System**",
-  "main": "app/index.js",
+  "main": "app/frontend/index.js",
   "type": "module",
   "author": "Allyssonjm<allysosnjm@gmail.com>",
   "homepage": "https://github.com/allyssonjm/prs#readme",
@@ -16,10 +16,6 @@
   },
   "bugs": {
     "url": "https://github.com/allyssonjm/prs/issues"
-  },
-  "scripts": {
-    "train": "node --max-old-space-size=8192 scripts/train.js",
-    "predict": "node scripts/predict.js"
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.15.0",
