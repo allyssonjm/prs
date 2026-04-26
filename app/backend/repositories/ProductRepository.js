@@ -1,4 +1,4 @@
-import { query } from '../connection.js'
+import { query } from '../database/connection.js'
 
 export class ProductRepository {
     async getAllProducts () {

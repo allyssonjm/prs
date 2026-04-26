@@ -5,9 +5,9 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { ModelTrainingService } from './services/ModelTrainingService.js'
 import { RecommendationService } from './services/RecommendationService.js'
-import { EmbeddingRepository } from './database/repositories/EmbeddingRepository.js'
-import { UserRepository } from './database/repositories/UserRepository.js'
-import { ProductRepository } from './database/repositories/ProductRepository.js'
+import { EmbeddingRepository } from './repositories/EmbeddingRepository.js'
+import { UserRepository } from './repositories/UserRepository.js'
+import { ProductRepository } from './repositories/ProductRepository.js'
 
 dotenv.config()
 

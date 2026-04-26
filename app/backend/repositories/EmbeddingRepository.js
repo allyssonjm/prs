@@ -1,7 +1,27 @@
-import { query } from '../connection.js'
+import { query } from '../database/connection.js'
 
 export class EmbeddingRepository {
+    constructor () {
+        this.expectedDimension = 128
+    }
+
     async saveProductEmbedding (productId, embedding, metadata) {
+        // Validar e limpar embedding
+        const cleanEmbedding = this.cleanVector(embedding, this.expectedDimension)
+        const cleanCategoryEncoding = this.cleanVector(metadata.categoryEncoding, this.expectedDimension)
+        const cleanColorEncoding = this.cleanVector(metadata.colorEncoding, this.expectedDimension)
+
+        // Verificar dimensão correta
+        if (cleanEmbedding.length !== this.expectedDimension) {
+            throw new Error(`Invalid embedding dimension: expected ${this.expectedDimension}, got ${cleanEmbedding.length}`)
+        }
+
+        // Verificar se os vetores são válidos
+        if (cleanEmbedding.some(v => isNaN(v) || !isFinite(v))) {
+            console.error(`Invalid embedding for product ${productId}:`, cleanEmbedding)
+            throw new Error(`Invalid embedding for product ${productId}`)
+        }
+
         await query(`
             INSERT INTO product_embeddings (
                 product_id, embedding, category_encoding, 
@@ -16,15 +36,29 @@ export class EmbeddingRepository {
                 updated_at = CURRENT_TIMESTAMP
         `, [
             productId,
-            `[${embedding.join(',')}]`,
-            `[${metadata.categoryEncoding.join(',')}]`,
-            `[${metadata.colorEncoding.join(',')}]`,
-            metadata.normalizedPrice,
-            metadata.avgPurchaserAge
+            `[${cleanEmbedding.join(',')}]`,
+            `[${cleanCategoryEncoding.join(',')}]`,
+            `[${cleanColorEncoding.join(',')}]`,
+            metadata.normalizedPrice || 0,
+            metadata.avgPurchaserAge || 0
         ])
+
+        console.log(`Saved product embedding for product ${productId} (dimension: ${cleanEmbedding.length})`)
     }
 
     async saveUserEmbedding (customerId, embedding, purchasePattern) {
+        const cleanEmbedding = this.cleanVector(embedding, this.expectedDimension)
+        const cleanPattern = this.cleanVector(purchasePattern, this.expectedDimension)
+
+        if (cleanEmbedding.length !== this.expectedDimension) {
+            throw new Error(`Invalid embedding dimension: expected ${this.expectedDimension}, got ${cleanEmbedding.length}`)
+        }
+
+        if (cleanEmbedding.some(v => isNaN(v) || !isFinite(v))) {
+            console.error(`Invalid embedding for user ${customerId}:`, cleanEmbedding)
+            throw new Error(`Invalid embedding for user ${customerId}`)
+        }
+
         await query(`
             INSERT INTO user_embeddings (customer_id, embedding, purchase_pattern)
             VALUES ($1, $2, $3)
@@ -32,7 +66,50 @@ export class EmbeddingRepository {
                 embedding = EXCLUDED.embedding,
                 purchase_pattern = EXCLUDED.purchase_pattern,
                 updated_at = CURRENT_TIMESTAMP
-        `, [customerId, `[${embedding.join(',')}]`, `[${purchasePattern.join(',')}]`])
+        `, [customerId, `[${cleanEmbedding.join(',')}]`, `[${cleanPattern.join(',')}]`])
+
+        console.log(`Saved user embedding for user ${customerId} (dimension: ${cleanEmbedding.length})`)
+    }
+
+    cleanVector (vector, targetDimension = 128) {
+        if (!vector || !Array.isArray(vector)) {
+            return new Array(targetDimension).fill(0)
+        }
+
+        let cleanVector = vector.map(v => {
+            if (isNaN(v) || !isFinite(v)) return 0
+            return Math.max(-1, Math.min(1, v))
+        })
+
+        // Ajustar dimensão
+        if (cleanVector.length !== targetDimension) {
+            if (cleanVector.length > targetDimension) {
+                // Pooling para reduzir
+                const ratio = cleanVector.length / targetDimension
+                const result = []
+                for (let i = 0; i < targetDimension; i++) {
+                    const start = Math.floor(i * ratio)
+                    const end = Math.floor((i + 1) * ratio)
+                    let sum = 0
+                    let count = 0
+                    for (let j = start; j < end && j < cleanVector.length; j++) {
+                        sum += cleanVector[j]
+                        count++
+                    }
+                    result.push(count > 0 ? sum / count : 0)
+                }
+                cleanVector = result
+            } else {
+                // Expandir com zeros
+                const result = [...cleanVector]
+                while (result.length < targetDimension) {
+                    result.push(0)
+                }
+                cleanVector = result
+            }
+        }
+
+        return cleanVector
     }
 
     async getProductEmbeddings () {
@@ -59,7 +136,8 @@ export class EmbeddingRepository {
     }
 
     async getSimilarProducts (userEmbedding, limit = 10, excludeProductIds = []) {
-        const embeddingStr = `[${userEmbedding.join(',')}]`
+        const cleanEmbedding = this.cleanVector(userEmbedding, this.expectedDimension)
+        const embeddingStr = `[${cleanEmbedding.join(',')}]`
         const excludeCondition = excludeProductIds.length > 0
             ? `AND p.id NOT IN (${excludeProductIds.join(',')})`
             : ''
@@ -98,9 +176,9 @@ export class EmbeddingRepository {
             modelVersion,
             weightsBuffer,
             JSON.stringify(architecture),
-            metrics.epochs,
-            metrics.accuracy,
-            metrics.loss,
+            metrics.epochs || 50,
+            metrics.accuracy || 0,
+            metrics.loss || 0,
             true,
             JSON.stringify(metrics)
         ])

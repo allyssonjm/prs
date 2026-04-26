@@ -1,15 +1,11 @@
 -- Habilitar extensão pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Excluindo as tabelas antigas de embeddings, se existirem
-DROP TABLE IF EXISTS product_embeddings;
-DROP TABLE IF EXISTS user_embeddings;
-DROP TABLE IF EXISTS model_metadata;
-
 -- =====================================================
 -- Tabela para armazenar embeddings de usuários
 -- =====================================================
-CREATE TABLE IF NOT EXISTS user_embeddings (
+DROP TABLE IF EXISTS user_embeddings CASCADE;
+CREATE TABLE user_embeddings (
     id BIGSERIAL PRIMARY KEY,
     customer_id BIGINT NOT NULL,
     embedding vector(128),
@@ -19,19 +15,13 @@ CREATE TABLE IF NOT EXISTS user_embeddings (
 );
 
 -- Adicionar unique constraint para customer_id
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'user_embeddings_customer_id_unique'
-    ) THEN
-        ALTER TABLE user_embeddings ADD CONSTRAINT user_embeddings_customer_id_unique UNIQUE (customer_id);
-    END IF;
-END $$;
+ALTER TABLE user_embeddings ADD CONSTRAINT user_embeddings_customer_id_unique UNIQUE (customer_id);
 
 -- =====================================================
 -- Tabela para armazenar embeddings de produtos
 -- =====================================================
-CREATE TABLE IF NOT EXISTS product_embeddings (
+DROP TABLE IF EXISTS product_embeddings CASCADE;
+CREATE TABLE product_embeddings (
     id BIGSERIAL PRIMARY KEY,
     product_id BIGINT NOT NULL,
     embedding vector(128),
@@ -44,19 +34,13 @@ CREATE TABLE IF NOT EXISTS product_embeddings (
 );
 
 -- Adicionar unique constraint para product_id
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'product_embeddings_product_id_unique'
-    ) THEN
-        ALTER TABLE product_embeddings ADD CONSTRAINT product_embeddings_product_id_unique UNIQUE (product_id);
-    END IF;
-END $$;
+ALTER TABLE product_embeddings ADD CONSTRAINT product_embeddings_product_id_unique UNIQUE (product_id);
 
 -- =====================================================
 -- Tabela para armazenar modelo treinado
 -- =====================================================
-CREATE TABLE IF NOT EXISTS model_metadata (
+DROP TABLE IF EXISTS model_metadata CASCADE;
+CREATE TABLE model_metadata (
     id BIGSERIAL PRIMARY KEY,
     model_version VARCHAR(50) NOT NULL,
     model_weights BYTEA,
@@ -70,16 +54,9 @@ CREATE TABLE IF NOT EXISTS model_metadata (
 );
 
 -- =====================================================
--- Índices para busca de similaridade (opcional, requer pgvector)
+-- Índices para busca de similaridade
 -- =====================================================
-DO $$ 
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM pg_extension WHERE extname = 'vector'
-    ) THEN
-        CREATE INDEX IF NOT EXISTS idx_product_embeddings_vector ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
-    END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_product_embeddings_vector ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
 
 -- =====================================================
 -- Função para calcular similaridade de cosseno

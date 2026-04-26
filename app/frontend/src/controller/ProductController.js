@@ -96,10 +96,6 @@ export class ProductController {
             // Disparar evento de compra adicionada
             this.#events.dispatchPurchaseAdded({ user: this.#currentUser, product })
 
-            // Disparar retreinamento do modelo
-            await this.triggerRetraining()
-
-            // Após retreinamento, disparar nova recomendação
             setTimeout(() => {
                 this.#events.dispatchRecommend(this.#currentUser)
             }, 2000)

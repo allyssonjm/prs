@@ -1,7 +1,6 @@
-// backend/services/RecommendationService.js
-import { EmbeddingRepository } from '../database/repositories/EmbeddingRepository.js'
-import { UserRepository } from '../database/repositories/UserRepository.js'
-import { ProductRepository } from '../database/repositories/ProductRepository.js'
+import { EmbeddingRepository } from '../repositories/EmbeddingRepository.js'
+import { UserRepository } from '../repositories/UserRepository.js'
+import { ProductRepository } from '../repositories/ProductRepository.js'
 import { VectorService } from './VectorService.js'
 
 export class RecommendationService {
@@ -28,14 +27,8 @@ export class RecommendationService {
             maxPrice: priceRange.max,
             minAge: ageRange.min,
             maxAge: ageRange.max,
-            weights: {
-                category: 0.4,
-                color: 0.3,
-                price: 0.2,
-                age: 0.1
-            }
+            weights: { category: 0.4, color: 0.3, price: 0.2, age: 0.1 }
         }
-
         this.vectorService.buildIndexes(categories, colors)
 
         return this.context
@@ -44,36 +37,26 @@ export class RecommendationService {
     async getRecommendations (userId, limit = 10) {
         await this.initContext()
 
-        // Buscar usuário atualizado (com compras recentes)
         const user = await this.userRepo.getUserById(userId)
-        if (!user) {
-            throw new Error(`User ${userId} not found`)
-        }
+        if (!user) throw new Error(`User ${userId} not found`)
 
-        // Obter IDs de produtos já comprados para excluir das recomendações
         const purchasedProductIds = user.purchases.map(p => p.id)
 
         if (user.purchases.length === 0) {
-            // Usuário sem histórico - recomendar produtos populares
             return this.getPopularProducts(limit)
         }
 
-        // Gerar embedding do usuário baseado no histórico de compras
         const userEmbedding = this.vectorService.encodeUser(user, this.context)
-
-        // Buscar produtos similares via pgvector
         const similarProducts = await this.embeddingRepo.getSimilarProducts(
             userEmbedding,
-            limit * 2, // Buscar mais para filtrar
+            Math.min(limit * 2, 50),  // Limitar busca
             purchasedProductIds
         )
 
-        // Filtrar e ordenar
         let recommendations = similarProducts
-            .filter(p => p.similarity > 0.3) // Similaridade mínima
+            .filter(p => p.similarity && p.similarity > 0.2)  // Similaridade mínima mais baixa
             .slice(0, limit)
 
-        // Se não houver recomendações suficientes, completar com produtos populares
         if (recommendations.length < limit) {
             const popular = await this.getPopularProducts(limit - recommendations.length)
             recommendations = [...recommendations, ...popular]
@@ -86,15 +69,14 @@ export class RecommendationService {
             price: parseFloat(rec.price),
             color: rec.color,
             brand: rec.brand,
-            score: rec.similarity
+            score: rec.similarity || 0.5
         }))
     }
 
     async getPopularProducts (limit = 10) {
-        const result = await this.embeddingRepo.getSimilarProducts(
-            new Array(this.vectorService.dimensions).fill(0.5), // Vetor neutro
-            limit
-        )
+        // Vetor neutro para buscar produtos populares
+        const neutralVector = new Array(this.vectorService.dimensions).fill(0.5)
+        const result = await this.embeddingRepo.getSimilarProducts(neutralVector, limit)
         return result
     }
 
@@ -105,20 +87,14 @@ export class RecommendationService {
             return this.getPopularProducts(limit)
         }
 
-        // Análise de categorias preferidas
         const categoryCount = {}
-        const colorCount = {}
-
         user.purchases.forEach(purchase => {
             categoryCount[purchase.category] = (categoryCount[purchase.category] || 0) + 1
-            colorCount[purchase.color] = (colorCount[purchase.color] || 0) + 1
         })
 
-        // Categoria preferida
         const topCategory = Object.entries(categoryCount)
             .sort((a, b) => b[1] - a[1])[0]?.[0]
 
-        // Buscar produtos da categoria preferida
         const allProducts = await this.productRepo.getAllProducts()
         let recommendations = []
 
@@ -128,12 +104,11 @@ export class RecommendationService {
                 .slice(0, limit)
         }
 
-        // Se não houver suficientes, completar com base em similaridade de embedding
         if (recommendations.length < limit) {
             const userEmbedding = this.vectorService.encodeUser(user, this.context)
             const similar = await this.embeddingRepo.getSimilarProducts(
                 userEmbedding,
-                limit,
+                Math.min(limit * 2, 50),
                 user.purchases.map(p => p.id)
             )
 
