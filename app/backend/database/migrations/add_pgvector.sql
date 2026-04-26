@@ -1,43 +1,66 @@
 -- Habilitar extensão pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- Excluindo as tabelas antigas de embeddings, se existirem
+DROP TABLE IF EXISTS product_embeddings;
+DROP TABLE IF EXISTS user_embeddings;
+DROP TABLE IF EXISTS model_metadata;
+
 -- =====================================================
 -- Tabela para armazenar embeddings de usuários
 -- =====================================================
 CREATE TABLE IF NOT EXISTS user_embeddings (
     id BIGSERIAL PRIMARY KEY,
-    customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-    embedding vector(128),  -- Dimensão do embedding do usuário
-    purchase_pattern vector(128), -- Padrão de compras
+    customer_id BIGINT NOT NULL,
+    embedding vector(128),
+    purchase_pattern vector(128),
     created_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(customer_id)
+    updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Adicionar unique constraint para customer_id
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'user_embeddings_customer_id_unique'
+    ) THEN
+        ALTER TABLE user_embeddings ADD CONSTRAINT user_embeddings_customer_id_unique UNIQUE (customer_id);
+    END IF;
+END $$;
 
 -- =====================================================
 -- Tabela para armazenar embeddings de produtos
 -- =====================================================
 CREATE TABLE IF NOT EXISTS product_embeddings (
     id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    embedding vector(128),  -- Embedding do produto baseado em features
-    category_encoding vector,  -- One-hot de categoria
-    color_encoding vector,      -- One-hot de cor
-    normalized_price FLOAT,     -- Preço normalizado 0-1
-    avg_purchaser_age FLOAT,    -- Idade média dos compradores
+    product_id BIGINT NOT NULL,
+    embedding vector(128),
+    category_encoding vector,
+    color_encoding vector,
+    normalized_price FLOAT,
+    avg_purchaser_age FLOAT,
     created_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(product_id)
+    updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Adicionar unique constraint para product_id
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'product_embeddings_product_id_unique'
+    ) THEN
+        ALTER TABLE product_embeddings ADD CONSTRAINT product_embeddings_product_id_unique UNIQUE (product_id);
+    END IF;
+END $$;
+
 -- =====================================================
--- Tabela para armazenar modelo treinado (pesos serializados)
+-- Tabela para armazenar modelo treinado
 -- =====================================================
 CREATE TABLE IF NOT EXISTS model_metadata (
     id BIGSERIAL PRIMARY KEY,
     model_version VARCHAR(50) NOT NULL,
-    model_weights BYTEA,  -- Pesos serializados do modelo
-    model_architecture JSONB,  -- Arquitetura do modelo
+    model_weights BYTEA,
+    model_architecture JSONB,
     training_date TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     training_epochs INTEGER,
     final_accuracy FLOAT,
@@ -47,10 +70,16 @@ CREATE TABLE IF NOT EXISTS model_metadata (
 );
 
 -- =====================================================
--- Índices para busca de similaridade
+-- Índices para busca de similaridade (opcional, requer pgvector)
 -- =====================================================
-CREATE INDEX IF NOT EXISTS idx_user_embeddings_vector ON user_embeddings USING ivfflat (embedding vector_cosine_ops);
-CREATE INDEX IF NOT EXISTS idx_product_embeddings_vector ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'vector'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_product_embeddings_vector ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
+    END IF;
+END $$;
 
 -- =====================================================
 -- Função para calcular similaridade de cosseno
@@ -73,10 +102,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER update_user_embeddings_updated_at
+DROP TRIGGER IF EXISTS update_user_embeddings_updated_at ON user_embeddings;
+CREATE TRIGGER update_user_embeddings_updated_at
     BEFORE UPDATE ON user_embeddings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE OR REPLACE TRIGGER update_product_embeddings_updated_at
+DROP TRIGGER IF EXISTS update_product_embeddings_updated_at ON product_embeddings;
+CREATE TRIGGER update_product_embeddings_updated_at
     BEFORE UPDATE ON product_embeddings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

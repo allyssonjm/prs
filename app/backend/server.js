@@ -1,4 +1,3 @@
-// backend/server.js
 import express from 'express'
 import { WebSocketServer } from 'ws'
 import http from 'http'
@@ -19,98 +18,153 @@ const wss = new WebSocketServer({ server })
 app.use(cors())
 app.use(express.json())
 
-// Instâncias dos serviços
 const trainingService = new ModelTrainingService()
 const recommendationService = new RecommendationService()
 const embeddingRepo = new EmbeddingRepository()
 const userRepo = new UserRepository()
 const productRepo = new ProductRepository()
 
-// Estado do modelo
 let isModelTrained = false
 let trainingInProgress = false
+let activeWebSockets = new Set()
 
 // ==================== API REST ====================
 
-// Obter todos os usuários
 app.get('/api/users', async (req, res) => {
     try {
         const users = await userRepo.getAllUsers()
         res.json(users)
     } catch (error) {
+        console.error('Error fetching users:', error)
         res.status(500).json({ error: error.message })
     }
 })
 
-// Obter usuário por ID
 app.get('/api/users/:id', async (req, res) => {
     try {
         const user = await userRepo.getUserById(parseInt(req.params.id))
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' })
-        }
+        if (!user) return res.status(404).json({ error: 'User not found' })
         res.json(user)
     } catch (error) {
+        console.error('Error fetching user:', error)
         res.status(500).json({ error: error.message })
     }
 })
 
-// Obter todos os produtos
 app.get('/api/products', async (req, res) => {
     try {
         const products = await productRepo.getAllProducts()
         res.json(products)
     } catch (error) {
+        console.error('Error fetching products:', error)
         res.status(500).json({ error: error.message })
     }
 })
 
-// Obter recomendações
 app.get('/api/recommendations/:userId', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 10
         const recommendations = await recommendationService.getRecommendations(
-            parseInt(req.params.userId),
-            limit
+            parseInt(req.params.userId), limit
         )
         res.json(recommendations)
     } catch (error) {
+        console.error('Error getting recommendations:', error)
         res.status(500).json({ error: error.message })
     }
 })
 
-// Obter recomendações híbridas
-app.get('/api/recommendations/hybrid/:userId', async (req, res) => {
-    try {
-        const limit = parseInt(req.query.limit) || 10
-        const recommendations = await recommendationService.hybridRecommendation(
-            parseInt(req.params.userId),
-            limit
-        )
-        res.json(recommendations)
-    } catch (error) {
-        res.status(500).json({ error: error.message })
-    }
-})
-
-// Registrar compra
+// Endpoint para registrar compra
 app.post('/api/purchases', async (req, res) => {
+    try {
+        const { userId, productId, product } = req.body
+
+        console.log(`Recording purchase: user ${userId}, product ${productId || product?.id}`)
+
+        // Registrar a compra no banco de dados
+        await userRepo.addPurchase(userId, productId || product.id)
+
+        // Buscar usuário atualizado
+        const updatedUser = await userRepo.getUserById(userId)
+
+        // Notificar todos os clients WebSocket sobre a nova compra
+        const message = JSON.stringify({
+            type: 'purchaseRecorded',
+            userId: userId,
+            user: updatedUser
+        })
+
+        activeWebSockets.forEach(ws => {
+            if (ws.readyState === ws.OPEN) {
+                ws.send(message)
+            }
+        })
+
+        res.json({
+            success: true,
+            message: 'Purchase recorded',
+            user: updatedUser
+        })
+    } catch (error) {
+        console.error('Error recording purchase:', error)
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Endpoint para remover compra
+app.delete('/api/purchases', async (req, res) => {
     try {
         const { userId, productId } = req.body
 
-        // Aqui você implementaria a lógica para registrar a compra
-        // Por simplicidade, vamos apenas atualizar o cache
+        console.log(`Removing purchase: user ${userId}, product ${productId}`)
 
-        // Após a compra, podemos atualizar o embedding do usuário
-        const user = await userRepo.getUserById(userId)
+        // Remover a compra do banco de dados
+        await userRepo.removePurchase(userId, productId)
 
-        res.json({ success: true, message: 'Purchase recorded' })
+        // Buscar usuário atualizado
+        const updatedUser = await userRepo.getUserById(userId)
+
+        // Notificar todos os clients WebSocket sobre a remoção
+        const message = JSON.stringify({
+            type: 'purchaseRemoved',
+            userId: userId,
+            user: updatedUser
+        })
+
+        activeWebSockets.forEach(ws => {
+            if (ws.readyState === ws.OPEN) {
+                ws.send(message)
+            }
+        })
+
+        res.json({
+            success: true,
+            message: 'Purchase removed',
+            user: updatedUser
+        })
     } catch (error) {
+        console.error('Error removing purchase:', error)
         res.status(500).json({ error: error.message })
     }
 })
 
-// Status do modelo
+// Endpoint para retreinar modelo
+app.post('/api/retrain', async (req, res) => {
+    try {
+        if (trainingInProgress) {
+            return res.status(409).json({ error: 'Training already in progress' })
+        }
+
+        // Iniciar treinamento assíncrono
+        retrainModel()
+
+        res.json({ success: true, message: 'Model retraining started' })
+    } catch (error) {
+        console.error('Error starting retraining:', error)
+        res.status(500).json({ error: error.message })
+    }
+})
+
 app.get('/api/model/status', async (req, res) => {
     try {
         const activeModel = await embeddingRepo.getActiveModel()
@@ -125,14 +179,94 @@ app.get('/api/model/status', async (req, res) => {
             } : null
         })
     } catch (error) {
+        console.error('Error getting model status:', error)
         res.status(500).json({ error: error.message })
     }
 })
+
+// Função para retreinar o modelo
+async function retrainModel () {
+    if (trainingInProgress) {
+        console.log('Training already in progress, skipping...')
+        return
+    }
+
+    trainingInProgress = true
+    isModelTrained = false
+
+    // Notificar todos os clients
+    const startMessage = JSON.stringify({
+        type: 'trainingStarted'
+    })
+    activeWebSockets.forEach(ws => {
+        if (ws.readyState === ws.OPEN) ws.send(startMessage)
+    })
+
+    trainingService.removeAllListeners()
+
+    trainingService.on('progress', (progress) => {
+        const message = JSON.stringify({
+            type: 'progress',
+            progress: progress.progress,
+            message: progress.message
+        })
+        activeWebSockets.forEach(ws => {
+            if (ws.readyState === ws.OPEN) ws.send(message)
+        })
+    })
+
+    trainingService.on('trainingLog', (log) => {
+        const message = JSON.stringify({
+            type: 'trainingLog',
+            epoch: log.epoch,
+            loss: log.loss,
+            accuracy: log.accuracy
+        })
+        activeWebSockets.forEach(ws => {
+            if (ws.readyState === ws.OPEN) ws.send(message)
+        })
+    })
+
+    trainingService.on('complete', (result) => {
+        isModelTrained = true
+        trainingInProgress = false
+        const message = JSON.stringify({
+            type: 'trainingComplete',
+            accuracy: result.accuracy,
+            loss: result.loss,
+            modelId: result.modelId
+        })
+        activeWebSockets.forEach(ws => {
+            if (ws.readyState === ws.OPEN) ws.send(message)
+        })
+        console.log(`✅ Model retrained! Accuracy: ${(result.accuracy * 100).toFixed(2)}%`)
+    })
+
+    trainingService.on('error', (error) => {
+        trainingInProgress = false
+        const message = JSON.stringify({
+            type: 'error',
+            message: error.message
+        })
+        activeWebSockets.forEach(ws => {
+            if (ws.readyState === ws.OPEN) ws.send(message)
+        })
+        console.error('Training error:', error)
+    })
+
+    try {
+        await trainingService.train()
+    } catch (error) {
+        console.error('Training failed:', error)
+        trainingInProgress = false
+    }
+}
 
 // ==================== WebSocket ====================
 
 wss.on('connection', (ws) => {
     console.log('Client connected')
+    activeWebSockets.add(ws)
 
     ws.on('message', async (message) => {
         const data = JSON.parse(message.toString())
@@ -140,73 +274,15 @@ wss.on('connection', (ws) => {
         switch (data.action) {
             case 'trainModel':
                 if (trainingInProgress) {
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        message: 'Training already in progress'
-                    }))
+                    ws.send(JSON.stringify({ type: 'error', message: 'Training already in progress' }))
                     return
                 }
-
-                trainingInProgress = true
-                isModelTrained = false
-
-                // Configurar listeners do serviço de treinamento
-                trainingService.removeAllListeners()
-
-                trainingService.on('progress', (progress) => {
-                    ws.send(JSON.stringify({
-                        type: 'progress',
-                        progress: progress.progress,
-                        message: progress.message
-                    }))
-                })
-
-                trainingService.on('trainingLog', (log) => {
-                    ws.send(JSON.stringify({
-                        type: 'trainingLog',
-                        epoch: log.epoch,
-                        loss: log.loss,
-                        accuracy: log.accuracy
-                    }))
-                })
-
-                trainingService.on('complete', (result) => {
-                    isModelTrained = true
-                    trainingInProgress = false
-                    ws.send(JSON.stringify({
-                        type: 'trainingComplete',
-                        accuracy: result.accuracy,
-                        loss: result.loss,
-                        modelId: result.modelId
-                    }))
-                })
-
-                trainingService.on('error', (error) => {
-                    trainingInProgress = false
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        message: error.message
-                    }))
-                })
-
-                // Iniciar treinamento
-                try {
-                    await trainingService.train()
-                } catch (error) {
-                    trainingInProgress = false
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        message: error.message
-                    }))
-                }
+                retrainModel()
                 break
 
             case 'recommend':
                 if (!isModelTrained) {
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        message: 'Model not trained yet'
-                    }))
+                    ws.send(JSON.stringify({ type: 'error', message: 'Model not trained yet' }))
                     return
                 }
 
@@ -221,23 +297,26 @@ wss.on('connection', (ws) => {
                         recommendations
                     }))
                 } catch (error) {
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        message: error.message
-                    }))
+                    ws.send(JSON.stringify({ type: 'error', message: error.message }))
                 }
                 break
 
-            default:
+            case 'status':
                 ws.send(JSON.stringify({
-                    type: 'error',
-                    message: `Unknown action: ${data.action}`
+                    type: 'status',
+                    trained: isModelTrained,
+                    inProgress: trainingInProgress
                 }))
+                break
+
+            default:
+                ws.send(JSON.stringify({ type: 'error', message: `Unknown action: ${data.action}` }))
         }
     })
 
     ws.on('close', () => {
         console.log('Client disconnected')
+        activeWebSockets.delete(ws)
     })
 
     // Enviar status atual
@@ -248,22 +327,18 @@ wss.on('connection', (ws) => {
     }))
 })
 
-// ==================== Inicialização ====================
-
 const PORT = process.env.PORT || 3001
-
 server.listen(PORT, async () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`)
     console.log(`🔌 WebSocket server running on ws://localhost:${PORT}`)
 
-    // Verificar se já existe um modelo treinado
     try {
         const activeModel = await embeddingRepo.getActiveModel()
         if (activeModel) {
             isModelTrained = true
             console.log(`✅ Active model found: ${activeModel.model_version} (accuracy: ${(activeModel.final_accuracy * 100).toFixed(2)}%)`)
         } else {
-            console.log('⚠️ No trained model found. Use WebSocket to train a new model.')
+            console.log('⚠️ No trained model found. Use "Train Model" to train a new model.')
         }
     } catch (error) {
         console.warn('Could not check for existing model:', error.message)

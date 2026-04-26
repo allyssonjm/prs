@@ -1,4 +1,3 @@
-// frontend/src/view/ProductView.js (modificado)
 import { View } from './View.js'
 
 export class ProductView extends View {
@@ -71,6 +70,50 @@ export class ProductView extends View {
         this.setButtonsState(disableButtons)
     }
 
+    showBuyingFeedback (productId) {
+        const button = document.querySelector(`.buy-now-btn[data-product-id="${productId}"]`)
+        if (button) {
+            const originalText = button.innerHTML
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...'
+            button.disabled = true
+
+            // Store original text to restore later
+            button.dataset.originalText = originalText
+        }
+    }
+
+    showBuySuccess (productId) {
+        const button = document.querySelector(`.buy-now-btn[data-product-id="${productId}"]`)
+        if (button) {
+            button.innerHTML = '<i class="bi bi-check-circle-fill"></i> Purchased!'
+            button.classList.remove('btn-primary')
+            button.classList.add('btn-success')
+
+            setTimeout(() => {
+                button.innerHTML = button.dataset.originalText || 'Buy Now'
+                button.classList.remove('btn-success')
+                button.classList.add('btn-primary')
+                button.disabled = false
+            }, 2000)
+        }
+    }
+
+    showBuyError (productId) {
+        const button = document.querySelector(`.buy-now-btn[data-product-id="${productId}"]`)
+        if (button) {
+            button.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Error!'
+            button.classList.remove('btn-primary')
+            button.classList.add('btn-danger')
+
+            setTimeout(() => {
+                button.innerHTML = button.dataset.originalText || 'Buy Now'
+                button.classList.remove('btn-danger')
+                button.classList.add('btn-primary')
+                button.disabled = false
+            }, 2000)
+        }
+    }
+
     setButtonsState (disabled) {
         if (!this.#buttons) {
             this.#buttons = document.querySelectorAll('.buy-now-btn')
@@ -83,25 +126,20 @@ export class ProductView extends View {
     attachBuyButtonListeners () {
         this.#buttons = document.querySelectorAll('.buy-now-btn')
         this.#buttons.forEach(button => {
+            // Adicionar atributo data-product-id para identificar o botão
+            const productData = JSON.parse(button.dataset.product)
+            button.setAttribute('data-product-id', productData.id)
+            button.setAttribute('data-product', button.dataset.product)
+
             // Remove existing listeners to avoid duplicates
             const newButton = button.cloneNode(true)
             button.parentNode.replaceChild(newButton, button)
 
             newButton.addEventListener('click', (event) => {
                 const product = JSON.parse(newButton.dataset.product)
-                const originalText = newButton.innerHTML
-
-                newButton.innerHTML = '<i class="bi bi-check-circle-fill"></i> Added'
-                newButton.classList.remove('btn-primary')
-                newButton.classList.add('btn-success')
-
-                setTimeout(() => {
-                    newButton.innerHTML = originalText
-                    newButton.classList.remove('btn-success')
-                    newButton.classList.add('btn-primary')
-                }, 500)
-
-                this.#onBuyProduct(product, newButton)
+                if (this.#onBuyProduct) {
+                    this.#onBuyProduct(product)
+                }
             })
         })
         this.#buttons = document.querySelectorAll('.buy-now-btn')

@@ -1,4 +1,4 @@
-import { query } from '../database/connection.js'
+import { query } from '../connection.js'
 
 export class ProductRepository {
     async getAllProducts () {
@@ -7,17 +7,18 @@ export class ProductRepository {
                 p.id,
                 p.product as name,
                 c.category,
-                co.color,
+                col.color,
                 p.price,
                 b.brand,
                 s.size,
                 f.feature
             FROM products p
             JOIN categories c ON p.category_id = c.id
-            JOIN colors co ON p.color_id = co.id
-            JOIN brands b ON p.brand_id = b.id
-            JOIN sizes s ON p.size_id = s.id
-            JOIN features f ON p.feature_id = f.id
+            JOIN colors col ON p.color_id = col.id
+            LEFT JOIN brands b ON p.brand_id = b.id
+            LEFT JOIN sizes s ON p.size_id = s.id
+            LEFT JOIN features f ON p.feature_id = f.id
+            ORDER BY p.id
         `)
         return result.rows
     }
@@ -28,17 +29,17 @@ export class ProductRepository {
                 p.id,
                 p.product as name,
                 c.category,
-                co.color,
+                col.color,
                 p.price,
                 b.brand,
                 s.size,
                 f.feature
             FROM products p
             JOIN categories c ON p.category_id = c.id
-            JOIN colors co ON p.color_id = co.id
-            JOIN brands b ON p.brand_id = b.id
-            JOIN sizes s ON p.size_id = s.id
-            JOIN features f ON p.feature_id = f.id
+            JOIN colors col ON p.color_id = col.id
+            LEFT JOIN brands b ON p.brand_id = b.id
+            LEFT JOIN sizes s ON p.size_id = s.id
+            LEFT JOIN features f ON p.feature_id = f.id
             WHERE p.id = $1
         `, [id])
         return result.rows[0]

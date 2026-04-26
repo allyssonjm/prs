@@ -1,21 +1,23 @@
-// frontend/src/workers/modelTrainingWorker.js
-import { workerEvents } from '../events/constants.js'
-
 // WebSocket connection to backend
 let ws = null
 let isConnected = false
 let isTraining = false
 let isModelReady = false
+let pendingRecommendations = []
+
+const WS_URL = 'ws://localhost:3001'
 
 function connectWebSocket () {
-    // Use localhost:3001 for backend
-    const wsUrl = 'ws://localhost:3001'
-
-    ws = new WebSocket(wsUrl)
+    console.log('🔌 Connecting to backend WebSocket...')
+    ws = new WebSocket(WS_URL)
 
     ws.onopen = () => {
-        console.log('WebSocket connected to backend')
+        console.log('✅ WebSocket connected to backend')
         isConnected = true
+        // Processar recomendações pendentes
+        pendingRecommendations.forEach(req => sendMessage(req))
+        pendingRecommendations = []
+        // Verificar status
         sendMessage({ action: 'status' })
     }
 
@@ -25,13 +27,15 @@ function connectWebSocket () {
     }
 
     ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
+        console.error('❌ WebSocket error:', error)
         isConnected = false
+        postMessage({ type: 'error', message: 'Connection to backend failed' })
     }
 
     ws.onclose = () => {
-        console.log('WebSocket disconnected, attempting to reconnect...')
+        console.log('🔌 WebSocket disconnected, attempting to reconnect in 3s...')
         isConnected = false
+        isTraining = false
         setTimeout(connectWebSocket, 3000)
     }
 }
@@ -40,14 +44,14 @@ function handleBackendMessage (data) {
     switch (data.type) {
         case 'progress':
             postMessage({
-                type: workerEvents.progressUpdate,
+                type: 'progressUpdate',
                 progress: { progress: data.progress, message: data.message }
             })
             break
 
         case 'trainingLog':
             postMessage({
-                type: workerEvents.trainingLog,
+                type: 'trainingLog',
                 epoch: data.epoch,
                 loss: data.loss,
                 accuracy: data.accuracy
@@ -58,20 +62,20 @@ function handleBackendMessage (data) {
             isTraining = false
             isModelReady = true
             postMessage({
-                type: workerEvents.trainingComplete,
+                type: 'trainingComplete',
                 accuracy: data.accuracy,
                 loss: data.loss,
                 modelId: data.modelId
             })
             postMessage({
-                type: workerEvents.trainingLog,
-                message: `Training completed! Final accuracy: ${(data.accuracy * 100).toFixed(2)}%`
+                type: 'trainingLog',
+                message: `✅ Training completed! Final accuracy: ${(data.accuracy * 100).toFixed(2)}%`
             })
             break
 
         case 'recommendations':
             postMessage({
-                type: workerEvents.recommend,
+                type: 'recommend',
                 user: { id: data.userId },
                 recommendations: data.recommendations
             })
@@ -79,15 +83,16 @@ function handleBackendMessage (data) {
 
         case 'status':
             isModelReady = data.trained
+            console.log(`Model status: ${data.trained ? 'trained' : 'not trained'}`)
+            if (data.modelInfo) {
+                console.log(`Model version: ${data.modelInfo.version}, accuracy: ${(data.modelInfo.accuracy * 100).toFixed(2)}%`)
+            }
             break
 
         case 'error':
             console.error('Backend error:', data.message)
             isTraining = false
-            postMessage({
-                type: workerEvents.error,
-                message: data.message
-            })
+            postMessage({ type: 'error', message: data.message })
             break
 
         default:
@@ -99,47 +104,41 @@ function sendMessage (message) {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message))
     } else {
-        console.warn('WebSocket not connected, message queued')
-        // Queue message for reconnection
-        setTimeout(() => sendMessage(message), 1000)
+        console.warn('WebSocket not connected, queuing message:', message.action)
+        pendingRecommendations.push(message)
+        if (!ws || ws.readyState === WebSocket.CLOSED) {
+            connectWebSocket()
+        }
     }
 }
 
-// Handlers for different actions
+function getStatus () {
+    sendMessage({ action: 'status' })
+}
+
 const handlers = {
-    [workerEvents.trainModel]: (data) => {
+    trainModel: (data) => {
         if (isTraining) {
-            postMessage({
-                type: workerEvents.error,
-                message: 'Training already in progress'
-            })
+            postMessage({ type: 'error', message: 'Training already in progress' })
             return
         }
         isTraining = true
-        sendMessage({ action: 'trainModel', users: data.users })
+        isModelReady = false
+        sendMessage({ action: 'trainModel' })
     },
 
-    [workerEvents.recommend]: (data) => {
+    recommend: (data) => {
         if (!isModelReady) {
-            postMessage({
-                type: workerEvents.error,
-                message: 'Model not trained yet. Please train the model first.'
-            })
+            postMessage({ type: 'error', message: 'Model not trained yet. Please train the model first.' })
             return
         }
-        sendMessage({
-            action: 'recommend',
-            userId: data.user.id,
-            limit: data.limit || 10
-        })
+        sendMessage({ action: 'recommend', userId: data.user.id, limit: 10 })
     },
 
-    [workerEvents.getStatus]: () => {
-        sendMessage({ action: 'status' })
-    }
+    getStatus: getStatus
 }
 
-// Initialize WebSocket connection
+// Iniciar conexão
 connectWebSocket()
 
 self.onmessage = (e) => {
