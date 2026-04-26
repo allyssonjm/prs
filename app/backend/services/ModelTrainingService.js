@@ -355,7 +355,7 @@ export class ModelTrainingService extends EventEmitter {
             const modelId = await this.saveModel({
                 accuracy: finalAccuracy,
                 loss: finalLoss,
-                epochs: 50,
+                epochs: 2,
                 dimensions: this.vectorService.dimensions
             })
 

@@ -36,23 +36,11 @@ export class UserService {
     }
 
     async updateUser (user) {
-        // Atualizar no backend (via POST para registrar compra)
-        const response = await fetch(`${this.#apiUrl}/purchases`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id, purchases: user.purchases })
-        })
-
-        if (!response.ok) {
-            throw new Error('Failed to update user')
-        }
-
-        // Atualizar cache local
+        // Atualizar cache local com os dados fornecidos
         const users = this.#getStorage()
         const userIndex = users.findIndex(u => u.id === user.id)
         if (userIndex !== -1) {
             users[userIndex] = { ...users[userIndex], ...user }
-            // Reordenar após atualização
             const sortedUsers = this.#sortUsers(users)
             this.#setStorage(sortedUsers)
         }

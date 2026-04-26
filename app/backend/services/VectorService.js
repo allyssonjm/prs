@@ -91,11 +91,10 @@ export class VectorService {
             }
             return result
         } else {
-            // Expandir dimensão: preencher com zeros ou repetir padrão
+            // Expandir dimensão: preencher com zeros
             const result = [...vector]
             while (result.length < targetDim) {
-                // Preencher com valores cíclicos do vetor original
-                result.push(result[result.length % vector.length])
+                result.push(0)
             }
             return result
         }

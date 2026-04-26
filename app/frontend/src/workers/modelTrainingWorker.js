@@ -86,15 +86,6 @@ function handleBackendMessage (data) {
             })
             break
 
-        case 'trainingStarted':
-            isTraining = true
-            isModelReady = false
-            postMessage({
-                type: 'trainingStarted',
-                message: 'Training started...'
-            })
-            break
-
         case 'recommendations':
             postMessage({
                 type: 'recommend',
@@ -110,6 +101,7 @@ function handleBackendMessage (data) {
             if (data.modelInfo) {
                 console.log(`Model version: ${data.modelInfo.version}, accuracy: ${(data.modelInfo.accuracy * 100).toFixed(2)}%`)
             }
+            postMessage({ type: 'status', trained: data.trained, inProgress: data.inProgress })
             break
 
         case 'error':

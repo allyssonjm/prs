@@ -81,6 +81,8 @@ export class RecommendationService {
     }
 
     async hybridRecommendation (userId, limit = 10) {
+        await this.initContext()
+
         const user = await this.userRepo.getUserById(userId)
 
         if (!user || user.purchases.length === 0) {

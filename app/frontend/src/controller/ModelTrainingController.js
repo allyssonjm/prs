@@ -33,7 +33,8 @@ export class ModelController {
             if (status.trained) {
                 this.#alreadyTrained = true
                 this.#modelView.enableRecommendButton()
-                this.#modelView.updateTrainingStatus('ready', `Model ready (Accuracy: ${(status.modelInfo.accuracy * 100).toFixed(2)}%)`)
+                const accuracyText = status.modelInfo ? ` (Accuracy: ${(status.modelInfo.accuracy * 100).toFixed(2)}%)` : ''
+                this.#modelView.updateTrainingStatus('ready', `Model ready${accuracyText}`)
                 this.#modelView.resetTrainingButton()
             }
             if (status.inProgress) {

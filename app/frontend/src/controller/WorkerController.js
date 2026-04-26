@@ -69,6 +69,10 @@ export class WorkerController {
                     this.#events.dispatchRecommendationsReady(data)
                     break
 
+                case 'status':
+                    this.#alreadyTrained = data.trained
+                    break
+
                 case 'error':
                     console.error('Worker error:', data.message)
                     this.#events.dispatchTrainingError({ message: data.message })

@@ -29,7 +29,7 @@ async function runMigration () {
 
 async function refreshDatabaseAndRunSeeders () {
     
-    exec('project_root/artisan migrate:refresh --seed', (error, stdout, stderr) => {
+    exec('path_root/artisan migrate:refresh --seed', (error, stdout, stderr) => {
         if (error) {
             console.error(`Erro: ${error.message}`)
             return

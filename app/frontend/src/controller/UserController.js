@@ -65,18 +65,22 @@ export class UserController {
     }
 
     async handlePurchaseAdded ({ user, product }) {
-        // Buscar usuário atualizado do backend
-        const updatedUser = await this.#userService.getUserById(user.id)
+        try {
+            // Buscar usuário atualizado do backend
+            const updatedUser = await this.#userService.getUserById(user.id)
 
-        // Atualizar a view
-        const lastPurchase = updatedUser.purchases[updatedUser.purchases.length - 1]
-        if (lastPurchase) {
-            this.#userView.addPastPurchase(lastPurchase)
+            // Atualizar a view
+            const lastPurchase = updatedUser.purchases[updatedUser.purchases.length - 1]
+            if (lastPurchase) {
+                this.#userView.addPastPurchase(lastPurchase)
+            }
+
+            // Notificar mudança
+            const allUsers = await this.#userService.getUsers()
+            this.#events.dispatchUsersUpdated({ users: allUsers })
+        } catch (error) {
+            console.error('Error updating view after purchase:', error)
         }
-
-        // Notificar mudança
-        const allUsers = await this.#userService.getUsers()
-        this.#events.dispatchUsersUpdated({ users: allUsers })
     }
 
     async handlePurchaseRemove ({ element, userId, product }) {

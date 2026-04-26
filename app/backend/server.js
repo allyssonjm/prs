@@ -283,7 +283,13 @@ wss.on('connection', (ws) => {
     activeWebSockets.add(ws)
 
     ws.on('message', async (message) => {
-        const data = JSON.parse(message.toString())
+        let data
+        try {
+            data = JSON.parse(message.toString())
+        } catch (e) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON message' }))
+            return
+        }
 
         switch (data.action) {
             case 'trainModel':

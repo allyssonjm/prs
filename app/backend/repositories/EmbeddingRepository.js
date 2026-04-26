@@ -138,9 +138,14 @@ export class EmbeddingRepository {
     async getSimilarProducts (userEmbedding, limit = 20, excludeProductIds = []) {
         const cleanEmbedding = this.cleanVector(userEmbedding, this.expectedDimension)
         const embeddingStr = `[${cleanEmbedding.join(',')}]`
-        const excludeCondition = excludeProductIds.length > 0
-            ? `AND p.id NOT IN (${excludeProductIds.join(',')})`
-            : ''
+
+        const params = [embeddingStr, limit]
+        let excludeCondition = ''
+
+        if (excludeProductIds.length > 0) {
+            params.push(excludeProductIds)
+            excludeCondition = `AND p.id != ALL($${params.length})`
+        }
 
         const result = await query(`
             SELECT 
@@ -160,7 +165,7 @@ export class EmbeddingRepository {
             ${excludeCondition}
             ORDER BY pe.embedding <=> $1::vector
             LIMIT $2
-        `, [embeddingStr, limit])
+        `, params)
 
         return result.rows
     }
