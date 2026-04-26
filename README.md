@@ -42,7 +42,7 @@ e "data/users.json" mas através de consulta de banco de dados postgres conforme
 4) A predição deverá ocorrer através de consulta na base de dados
 
 ## Nova Estrutura de arquivos
-
+```
 product-recommendation-system/
 ├── app/backend/
 │   ├── package.json
@@ -94,7 +94,7 @@ product-recommendation-system/
 │       └── workers/
 │           └── modelTrainingWorker.js
 └── README.md
-
+``` 
 
 # Uso
 
