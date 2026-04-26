@@ -35,7 +35,10 @@ export class ProductView extends View {
             sortedProducts.sort((a, b) => (b.score || 0) - (a.score || 0))
         }
 
-        const html = sortedProducts.map(product => {
+        // Limitar a 20 produtos exibidos
+        const displayProducts = sortedProducts.slice(0, 20)
+
+        const html = displayProducts.map(product => {
             const scoreHtml = isRecommendation && product.score
                 ? `<span class="badge bg-info ms-2">${(product.score * 100).toFixed(1)}% match</span>`
                 : ''
@@ -54,13 +57,14 @@ export class ProductView extends View {
         // Adicionar cabeçalho de recomendação se aplicável
         if (isRecommendation) {
             const header = `
-                <div class="col-12 mb-3">
-                    <div class="alert alert-success">
-                        <i class="bi bi-stars"></i> 
-                        <strong>Recommended for you!</strong> Based on your purchase history
-                    </div>
+            <div class="col-12 mb-3">
+                <div class="alert alert-success">
+                    <i class="bi bi-stars"></i> 
+                    <strong>Top 20 Recommendations for you!</strong> Based on your purchase history
+                    ${displayProducts.length < products.length ? `<span class="badge bg-secondary ms-2">Showing top ${displayProducts.length} of ${products.length}</span>` : ''}
                 </div>
-            `
+            </div>
+        `
             this.#productList.innerHTML = header + html
         } else {
             this.#productList.innerHTML = html

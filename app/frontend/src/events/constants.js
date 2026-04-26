@@ -6,6 +6,7 @@ export const events = {
     modelTrain: 'training:train',
     trainingStarted: 'training:started',
     trainingComplete: 'training:complete',
+    trainingError: 'training:error',
     modelProgressUpdate: 'model:progress-update',
     recommendationsReady: 'recommendations:ready',
     recommend: 'recommend',
@@ -15,6 +16,8 @@ export const events = {
 
 export const workerEvents = {
     trainingComplete: 'training:complete',
+    trainingStarted: 'training:started',
+    trainingError: 'training:error',
     trainModel: 'trainModel',
     recommend: 'recommend',
     trainingLog: 'training:log',

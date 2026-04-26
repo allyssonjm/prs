@@ -14,6 +14,7 @@ export class WorkerController {
 
     async init () {
         this.setupCallbacks()
+        this.#worker.postMessage({ action: 'getStatus' })
     }
 
     static init (deps) {
@@ -22,16 +23,18 @@ export class WorkerController {
 
     setupCallbacks () {
         this.#events.onTrainModel((data) => {
+            console.log('onTrainModel event received, sending to worker')
             this.#alreadyTrained = false
             this.triggerTrain(data)
         })
 
         this.#events.onTrainingComplete(() => {
+            console.log('Training complete event received')
             this.#alreadyTrained = true
         })
 
         this.#events.onRecommend((data) => {
-            // Se o modelo ainda não foi treinado, aguardar
+            console.log('onRecommend event received for user:', data.id)
             if (!this.#alreadyTrained) {
                 console.log('Model not trained yet, waiting...')
                 return
@@ -39,45 +42,51 @@ export class WorkerController {
             this.triggerRecommend(data)
         })
 
-        const eventsToIgnoreLogs = [
-            workerEvents.progressUpdate,
-            workerEvents.trainingLog,
-            workerEvents.trainingComplete,
-        ]
-
         this.#worker.onmessage = (event) => {
-            if (!eventsToIgnoreLogs.includes(event.data.type))
-                console.log(event.data)
+            const data = event.data
+            console.log('Worker message received:', data.type)
 
-            if (event.data.type === workerEvents.progressUpdate) {
-                this.#events.dispatchProgressUpdate(event.data.progress)
-            }
+            switch (data.type) {
+                case 'progressUpdate':
+                    this.#events.dispatchProgressUpdate(data.progress)
+                    break
 
-            if (event.data.type === workerEvents.trainingComplete) {
-                this.#events.dispatchTrainingComplete(event.data)
-                this.#alreadyTrained = true
-            }
+                case 'trainingLog':
+                    this.#events.dispatchTFVisLogs(data)
+                    break
 
-            if (event.data.type === workerEvents.trainingLog) {
-                this.#events.dispatchTFVisLogs(event.data)
-            }
+                case 'trainingStarted':
+                    console.log('Training started from worker')
+                    this.#events.dispatchTrainingStarted(data)
+                    break
 
-            if (event.data.type === workerEvents.recommend) {
-                this.#events.dispatchRecommendationsReady(event.data)
-            }
+                case 'trainingComplete':
+                    this.#alreadyTrained = true
+                    this.#events.dispatchTrainingComplete(data)
+                    break
 
-            if (event.data.type === workerEvents.error) {
-                console.error('Worker error:', event.data.message)
+                case 'recommend':
+                    this.#events.dispatchRecommendationsReady(data)
+                    break
+
+                case 'error':
+                    console.error('Worker error:', data.message)
+                    this.#events.dispatchTrainingError({ message: data.message })
+                    break
+
+                default:
+                    console.log('Unknown worker message:', data.type)
             }
         }
     }
 
     triggerTrain (users) {
-        this.#worker.postMessage({ action: workerEvents.trainModel, users })
+        console.log('triggerTrain sending to worker')
+        this.#worker.postMessage({ action: 'trainModel', users })
     }
 
     triggerRecommend (user) {
-        // Enviar apenas o ID do usuário para o worker
-        this.#worker.postMessage({ action: workerEvents.recommend, user: { id: user.id } })
+        console.log('triggerRecommend sending to worker for user:', user.id)
+        this.#worker.postMessage({ action: 'recommend', user: { id: user.id }, limit: 20 })
     }
 }

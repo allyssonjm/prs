@@ -106,21 +106,4 @@ export class ProductController {
         }
     }
 
-    async triggerRetraining () {
-        try {
-            console.log('Triggering model retraining...')
-            const response = await fetch('http://localhost:3001/api/retrain', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to start retraining')
-            }
-
-            console.log('Model retraining started')
-        } catch (error) {
-            console.error('Error triggering retraining:', error)
-        }
-    }
 }

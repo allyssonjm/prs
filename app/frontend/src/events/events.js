@@ -14,6 +14,18 @@ export default class Events {
         document.dispatchEvent(event)
     }
 
+    static onTrainingError (callback) {
+        document.addEventListener(events.trainingError, (event) => {
+            return callback(event.detail)
+        })
+    }
+    static dispatchTrainingError (data) {
+        const event = new CustomEvent(events.trainingError, {
+            detail: data
+        })
+        document.dispatchEvent(event)
+    }
+
     static onTrainingComplete (callback) {
         document.addEventListener(events.trainingComplete, (event) => {
             return callback(event.detail)

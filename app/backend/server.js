@@ -61,9 +61,10 @@ app.get('/api/products', async (req, res) => {
     }
 })
 
+// Endpoint para recomendações via REST
 app.get('/api/recommendations/:userId', async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 10
+        const limit = parseInt(req.query.limit) || 20 
         const recommendations = await recommendationService.getRecommendations(
             parseInt(req.params.userId), limit
         )
@@ -73,6 +74,19 @@ app.get('/api/recommendations/:userId', async (req, res) => {
         res.status(500).json({ error: error.message })
     }
 })
+
+// Endpoint para recomendações híbridas
+app.get('/api/recommendations/hybrid/:userId', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20 
+        const recommendations = await recommendationService.hybridRecommendation(
+            parseInt(req.params.userId), limit
+        )
+        res.json(recommendations)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+});
 
 // Endpoint para registrar compra
 app.post('/api/purchases', async (req, res) => {
@@ -289,7 +303,7 @@ wss.on('connection', (ws) => {
                 try {
                     const recommendations = await recommendationService.getRecommendations(
                         data.userId,
-                        data.limit || 10
+                        data.limit || 20
                     )
                     ws.send(JSON.stringify({
                         type: 'recommendations',

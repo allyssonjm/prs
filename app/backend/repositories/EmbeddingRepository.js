@@ -135,7 +135,7 @@ export class EmbeddingRepository {
         }))
     }
 
-    async getSimilarProducts (userEmbedding, limit = 10, excludeProductIds = []) {
+    async getSimilarProducts (userEmbedding, limit = 20, excludeProductIds = []) {
         const cleanEmbedding = this.cleanVector(userEmbedding, this.expectedDimension)
         const embeddingStr = `[${cleanEmbedding.join(',')}]`
         const excludeCondition = excludeProductIds.length > 0

@@ -109,9 +109,6 @@ export class UserController {
                 const updatedUsers = await this.#userService.getUsers()
                 this.#events.dispatchUsersUpdated({ users: updatedUsers })
 
-                // Disparar retreinamento do modelo
-                await this.triggerRetraining()
-
                 // Disparar recomendação novamente
                 const currentUser = await this.#userService.getUserById(userId)
                 this.#events.dispatchRecommend(currentUser)
@@ -121,24 +118,6 @@ export class UserController {
         } catch (error) {
             console.error('Error removing purchase:', error)
             alert('Failed to remove purchase. Please try again.')
-        }
-    }
-
-    async triggerRetraining () {
-        try {
-            console.log('Triggering model retraining after purchase removal...')
-            const response = await fetch('http://localhost:3001/api/retrain', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to start retraining')
-            }
-
-            console.log('Model retraining started')
-        } catch (error) {
-            console.error('Error triggering retraining:', error)
         }
     }
 

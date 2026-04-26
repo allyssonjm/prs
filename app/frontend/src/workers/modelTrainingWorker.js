@@ -44,6 +44,17 @@ function handleBackendMessage (data) {
     console.log('Received from backend:', data.type)
 
     switch (data.type) {
+
+        case 'trainingStarted':
+            console.log('Training started notification received')
+            isTraining = true
+            isModelReady = false
+            postMessage({
+                type: 'trainingStarted',
+                message: 'Training started...'
+            })
+            break;
+        
         case 'progress':
             postMessage({
                 type: 'progressUpdate',
@@ -147,7 +158,7 @@ const handlers = {
             postMessage({ type: 'error', message: 'Model not trained yet. Please train the model first.' })
             return
         }
-        sendMessage({ action: 'recommend', userId: data.user.id, limit: 10 })
+        sendMessage({ action: 'recommend', userId: data.user.id, limit: 20 })
     },
 
     'getStatus': getStatus
