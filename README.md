@@ -122,13 +122,15 @@ Frontend: HTML/CSS/JS + Bootstrap
 | Método | Endpoint | Descrição |
 | :--- | :---: | ---: |
 | Left-aligned | Centered | Right-aligned |
-| GET | /api/users | Lista todos os usuários |
-| GET | /api/users | Lista todos os usuários |
-| GET| /api/users/:id| Obtém usuário por ID
-| GET| /api/products| Lista todos os produtos
-| GET| /api/recommendations/:userId| Recomendações por embedding
-| GET| /api/recommendations/hybrid/:userId| Recomendações híbridas
-| GET| /api/model/status| Status do modelo treinado
+| GET | /api/users | Lista todos os usuários cadastrados no sistema. |
+| GET | /api/users/:id| Busca um usuário específico pelo ID. |
+| GET | /api/products| Lista todos os produtos disponíveis no catálogo. |
+| GET | /api/recommendations/:userId| Retorna recomendações de produtos baseadas no histórico do usuário usando embeddings. |
+| GET | /api/recommendations/hybrid/:userId| Retorna recomendações híbridas (baseadas em categoria preferida + embeddings). |
+| POST | /api/purchases | Registra uma nova compra para um usuário. |
+| DELETE | /api/purchases | Remove uma compra existente de um usuário. |
+| POST | /api/retrain | Status do modelo treinado |
+| GET| /api/model/status| Verifica o status atual do modelo de recomendação. |
 
 # WebSocket
 
