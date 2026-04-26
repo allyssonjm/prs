@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS model_metadata (
 -- =====================================================
 -- Índices para busca de similaridade
 -- =====================================================
-CREATE INDEX idx_user_embeddings_vector ON user_embeddings USING ivfflat (embedding vector_cosine_ops);
-CREATE INDEX idx_product_embeddings_vector ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_user_embeddings_vector ON user_embeddings USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_product_embeddings_vector ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
 
 -- =====================================================
 -- Função para calcular similaridade de cosseno
@@ -73,10 +73,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_user_embeddings_updated_at
+CREATE OR REPLACE TRIGGER update_user_embeddings_updated_at
     BEFORE UPDATE ON user_embeddings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_product_embeddings_updated_at
+CREATE OR REPLACE TRIGGER update_product_embeddings_updated_at
     BEFORE UPDATE ON product_embeddings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
