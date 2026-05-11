@@ -1,0 +1,20 @@
+{
+    "name": "prs",
+    "version": "1.0.0",
+    "description": "Product Recommendation System with TensorFlow.js and pgvector",
+    "type": "module",
+    "scripts": {
+        "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+        "start:backend": "cd backend && npm run dev",
+        "start:frontend": "cd frontend && npm start",
+        "setup": "npm run setup:backend && npm run setup:frontend",
+        "setup:backend": "cd backend && npm install",
+        "setup:frontend": "cd frontend && npm install",
+        "db:migrate": "cd backend && npm run migrate:latest",
+        "db:seed": "cd backend && npm run db:seed",
+        "db:reset": "cd backend && npm run db:reset"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.0"
+    }
+}
